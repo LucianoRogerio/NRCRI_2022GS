@@ -1,0 +1,570 @@
+---
+title: "Imputation"
+author: "LucianoRogerio"
+date: "2022-07-03"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+# Imputation NRCRI DCas22-7085
+
+```{bash Preparing working directory, eval = F}
+mkdir /workdir/lbraatz/
+cp -r /home/jj332_cas/lbraatz/NRCRI_2022GS /workdir/lbraatz/.
+```
+
+## Imputation with Reference Panel file
+
+Impute with [Beagle V5.0](https://faculty.washington.edu/browning/beagle/b5_0.html).
+
+Use the “imputation reference panel” dataset from 2019, e.g. chr1_ImputationReferencePanel_StageIIpartI_72219.vcf.gz as reference.
+
+Used 1 large memory Cornell CBSU machine (e.g. cbsumezey03; 64 cores, 512 GB RAM), running 1 chromosome at a time.
+salloc of 5 Cores and 100 Gb, so free imputation due to Kelly Robbins.
+
+R functions used from genomicMateSelectR.
+
+```{r Imputation parameters, eval = F}
+targetVCFpath<-here::here("data", "Report-DCas22-7085/") # location of the targetVCF
+refVCFpath<-here::here("data", "RefPop/")
+mapPath<-here::here("data", "CassavaGeneticMap/")
+outPath<-here::here("output/")
+outSuffix<-"DCas22_7085"
+```
+
+```{r Imputation Beagle 5, eval = F}
+purrr::map(1:18,~runBeagle5(targetVCF=paste0(targetVCFpath,"chr",.,
+                                             "_DCas22_7085.vcf.gz"),
+                            refVCF=paste0(refVCFpath,"chr",.,"_ImputationReferencePanel_StageIIpartI_72219.vcf.gz"),
+                            mapFile=paste0(mapPath,"chr",.,"_cassava_cM_pred.v6_91019.map"),
+                            outName=paste0(outPath,"chr",.,"_DCas22_7085_WA_REFimputed"),
+                            nthreads=5))
+```
+
+Clean up Beagle log files after run. Move to sub-directory output/BeagleLogs/.
+
+```{r Organizing output directory, eval = F}
+cd /workdir/lbraatz/NRCRI_2022GS/output/; 
+mkdir BeagleLogs;
+cp *_DCas22_7085_WA_REFimputed.log BeagleLogs/.
+cp -r BeagleLogs /home/jj332_cas/lbraatz/NRCRI_2022GS/output/.
+rm chr*_DCas22_7085_WA_REFimputed.log
+cp *_DCas22_7085_WA_REFimputed* /home/jj332_cas/lbraatz/NRCRI_2022GS/output/.
+```
+
+## Post Imputation Filter
+
+For now, the function will just do a fixed filter: AR2>0.75 (DR2>0.75 as of Beagle5.0), P_HWE>1e-20, MAF>0.005 [0.5%].
+
+It can easily be modified in the future to include parameters to vary the filter specifications.
+
+Input parameters
+
+```
+#' @inPath path to input VCF-to-be-filtered, can be left null if path included in @inName . Must end in "/"
+#' @inName name of input VCF file EXCLUDING file extension. Assumes .vcf.gz
+#' @outPath path where filtered VCF and related are to be stored.Can be left null if path included in @outName . Must end in "/".
+#' @outName name desired for output EXCLUDING extension. Output will be .vcf.gz 
+```
+
+Loop to filter all 18 VCF files in parallel
+
+```{r PostImputationFilter, eval = F}
+inPath<-here::here("output/")
+outPath<-here::here("output/")
+require(furrr); options(mc.cores=18); plan(multiprocess)
+future_map(1:18,~postImputeFilter(inPath=inPath,
+                                  inName=paste0("chr",.,"_DCas22_7085_WA_REFimputed"),
+                                  outPath=outPath,
+                                  outName=paste0("chr",.,
+                                                 "_DCas22_7085_WA_REFimputedAndFiltered")))
+```
+
+Let's check what is left
+
+```{r Check the number of markers, eval = F}
+purrr::map(1:18,~system(paste0("zcat ",here::here("output/"),"chr",.,
+                               "_DCas22_7085_WA_REFimputedAndFiltered.vcf.gz | wc -l")))
+```
+
+```
+chr1  - 7,267
+chr2  - 3,355
+chr3  - 2,927
+chr4  - 3,151
+chr5  - 2,723
+chr6  - 2,764
+chr7  - 1,428
+chr8  - 2,616
+chr9  - 2,756
+chr10 - 2,662
+chr11 - 2,669
+chr12 - 2,469
+chr13 - 2,143
+chr14 - 4,799
+chr15 - 3,261
+chr16 - 2,323
+chr17 - 2,388
+chr18 - 2,239
+```
+
+```{bash Copy files to biohpc cloud, eval = F}
+cd /workdir/lbraatz/NRCRI_2022GS/output/;
+cp -r chr*_DCas22_7085_WA_REFimputedAndFiltered* /home/jj332_cas/lbraatz/NRCRI_2022GS/output/
+
+```
+
+# Imputation NRCRI DCas22-7051
+
+```{bash Preparing working directory 2, eval = F}
+mkdir /workdir/lbraatz/
+cp -r /home/jj332_cas/lbraatz/NRCRI_2022GS /workdir/lbraatz/.
+```
+
+## Imputation with Reference Panel file
+
+Impute with [Beagle V5.0](https://faculty.washington.edu/browning/beagle/b5_0.html).
+
+Use the “imputation reference panel” dataset from 2019, e.g. chr1_ImputationReferencePanel_StageIIpartI_72219.vcf.gz as reference.
+
+Used 1 large memory Cornell CBSU machine (e.g. cbsulm10; 64 cores, 512 GB RAM), running 1 chromosome at a time.
+R functions used from genomicMateSelectR.
+
+```{r Imputation parameters 2, eval = F}
+.libPaths(c("/home/lbraatz/R/x86_64-pc-linux-gnu-library/4.1/", .libPaths()))
+library(genomicMateSelectR)
+targetVCFpath<-here::here("data", "Report-DCas22-7051/") # location of the targetVCF
+refVCFpath<-here::here("data", "RefPop/")
+mapPath<-here::here("data", "CassavaGeneticMap/")
+outPath<-here::here("output/")
+outSuffix<-"DCas22_7051"
+```
+
+```{r Imputation Beagle 5 2, eval = F}
+purrr::map(1:18,~runBeagle5(targetVCF=paste0(targetVCFpath,"chr",.,
+                                             "_DCas22_7051.vcf.gz"),
+                            refVCF=paste0(refVCFpath,"chr",.,"_ImputationReferencePanel_StageIIpartI_72219.vcf.gz"),
+                            mapFile=paste0(mapPath,"chr",.,"_cassava_cM_pred.v6_91019.map"),
+                            outName=paste0(outPath,"chr",.,"_DCas22_7051_WA_REFimputed"),
+                            nthreads=5))
+```
+
+Clean up Beagle log files after run. Move to sub-directory output/BeagleLogs/.
+
+```{r Organizing output directory 2, eval = F}
+cd /workdir/lbraatz/NRCRI_2022GS/output/; 
+mkdir BeagleLogs;
+cp *_DCas22_7051_WA_REFimputed.log BeagleLogs/.
+cp -r BeagleLogs /home/jj332_cas/lbraatz/NRCRI_2022GS/output/.
+rm chr*_DCas22_7051_WA_REFimputed.log
+cp *_DCas22_7051_WA_REFimputed* /home/jj332_cas/lbraatz/NRCRI_2022GS/output/.
+```
+
+## Post Imputation Filter
+
+For now, the function will just do a fixed filter: AR2>0.75 (DR2>0.75 as of Beagle5.0), P_HWE>1e-20, MAF>0.005 [0.5%].
+
+It can easily be modified in the future to include parameters to vary the filter specifications.
+
+Input parameters
+
+```
+#' @inPath path to input VCF-to-be-filtered, can be left null if path included in @inName . Must end in "/"
+#' @inName name of input VCF file EXCLUDING file extension. Assumes .vcf.gz
+#' @outPath path where filtered VCF and related are to be stored.Can be left null if path included in @outName . Must end in "/".
+#' @outName name desired for output EXCLUDING extension. Output will be .vcf.gz 
+```
+
+Loop to filter all 18 VCF files in parallel
+
+```{r PostImputationFilter 2, eval = F}
+inPath<-here::here("output/")
+outPath<-here::here("output/")
+require(furrr); options(mc.cores=18); plan(multiprocess)
+future_map(1:18,~postImputeFilter(inPath=inPath,
+                                  inName=paste0("chr",.,"_DCas22_7051_WA_REFimputed"),
+                                  outPath=outPath,
+                                  outName=paste0("chr",.,
+                                                 "_DCas22_7051_WA_REFimputedAndFiltered")))
+```
+
+Let's check what is left
+
+```{r Check the number of markers 2, eval = F}
+purrr::map(1:18,~system(paste0("zcat ",here::here("output/"),"chr",.,
+                               "_DCas22_7051_WA_REFimputedAndFiltered.vcf.gz | wc -l")))
+```
+
+```
+chr1  - 8,180
+chr2  - 3,964
+chr3  - 3,854
+chr4  - 4,020
+chr5  - 3,669
+chr6  - 3,457
+chr7  - 1,930
+chr8  - 3,152
+chr9  - 3,264
+chr10 - 3,060
+chr11 - 3,324
+chr12 - 2,824
+chr13 - 2,725
+chr14 - 5,321
+chr15 - 3,944
+chr16 - 2,813
+chr17 - 2,668
+chr18 - 2,897
+```
+
+```{bash Copy files to biohpc cloud 2, eval = F}
+cd /workdir/lbraatz/NRCRI_2022GS/output/;
+cp -r chr*_DCas22_7051_WA_REFimputedAndFiltered* /home/jj332_cas/lbraatz/NRCRI_2022GS/output/
+
+```
+
+# Imputation NRCRI DCas22-7086
+
+```{bash Preparing working directory 3, eval = F}
+mkdir /workdir/lbraatz/
+cp -r /home/jj332_cas/lbraatz/NRCRI_2022GS /workdir/lbraatz/.
+```
+
+## Imputation with Reference Panel file
+
+Impute with [Beagle V5.0](https://faculty.washington.edu/browning/beagle/b5_0.html).
+
+Use the “imputation reference panel” dataset from 2019, e.g. chr1_ImputationReferencePanel_StageIIpartI_72219.vcf.gz as reference.
+
+Used 1 large memory Cornell CBSU machine (e.g. cbsulm07; 10 cores, 512 GB RAM), running 1 chromosome at a time.
+R functions used from genomicMateSelectR.
+
+```{r Imputation parameters 3, eval = F}
+.libPaths(c("/home/lbraatz/R/x86_64-pc-linux-gnu-library/4.1/", .libPaths()))
+library(genomicMateSelectR)
+targetVCFpath<-here::here("data", "Report-DCas22-7086/") # location of the targetVCF
+refVCFpath<-here::here("data", "RefPop/")
+mapPath<-here::here("data", "CassavaGeneticMap/")
+outPath<-here::here("output/")
+outSuffix<-"DCas22_7086"
+```
+
+```{r Imputation Beagle 5 3, eval = F}
+purrr::map(1:18,~runBeagle5(targetVCF=paste0(targetVCFpath,"chr",.,
+                                             "_DCas22_7086.vcf.gz"),
+                            refVCF=paste0(refVCFpath,"chr",.,"_ImputationReferencePanel_StageIIpartI_72219.vcf.gz"),
+                            mapFile=paste0(mapPath,"chr",.,"_cassava_cM_pred.v6_91019.map"),
+                            outName=paste0(outPath,"chr",.,"_DCas22_7086_WA_REFimputed"),
+                            nthreads=5))
+```
+
+Clean up Beagle log files after run. Move to sub-directory output/BeagleLogs/.
+
+```{r Organizing output directory 3, eval = F}
+cd /workdir/lbraatz/NRCRI_2022GS/output/; 
+mkdir BeagleLogs;
+cp *_DCas22_7086_WA_REFimputed.log BeagleLogs/.
+cp -r BeagleLogs /home/jj332_cas/lbraatz/NRCRI_2022GS/output/.
+rm chr*_DCas22_7086_WA_REFimputed.log
+cp *_DCas22_7086_WA_REFimputed* /home/jj332_cas/lbraatz/NRCRI_2022GS/output/.
+```
+
+## Post Imputation Filter
+
+For now, the function will just do a fixed filter: AR2>0.75 (DR2>0.75 as of Beagle5.0), P_HWE>1e-20, MAF>0.005 [0.5%].
+
+It can easily be modified in the future to include parameters to vary the filter specifications.
+
+Input parameters
+
+```
+#' @inPath path to input VCF-to-be-filtered, can be left null if path included in @inName . Must end in "/"
+#' @inName name of input VCF file EXCLUDING file extension. Assumes .vcf.gz
+#' @outPath path where filtered VCF and related are to be stored.Can be left null if path included in @outName . Must end in "/".
+#' @outName name desired for output EXCLUDING extension. Output will be .vcf.gz 
+```
+
+Loop to filter all 18 VCF files in parallel
+
+```{r PostImputationFilter 3, eval = F}
+inPath<-here::here("output/")
+outPath<-here::here("output/")
+require(furrr); options(mc.cores=18); plan(multiprocess)
+future_map(1:18,~postImputeFilter(inPath=inPath,
+                                  inName=paste0("chr",.,"_DCas22_7086_WA_REFimputed"),
+                                  outPath=outPath,
+                                  outName=paste0("chr",.,
+                                                 "_DCas22_7086_WA_REFimputedAndFiltered")))
+```
+
+Let's check what is left
+
+```{r, eval = F}
+purrr::map(11:18,~system(paste0("zcat ",here::here("output/"),"chr",.,
+                               "_DCas22_7086_WA_REFimputedAndFiltered.vcf.gz | wc -l")))
+```
+
+```
+chr1  - 7,915
+chr2  - 3,656
+chr3  - 3,640
+chr4  - 4,014
+chr5  - 3,432
+chr6  - 3,313
+chr7  - 1,836
+chr8  - 3,090
+chr9  - 3,118
+chr10 - 2,839
+chr11 - 3,123
+chr12 - 2,660
+chr13 - 2,465
+chr14 - 4,507
+chr15 - 3,703
+chr16 - 2,599
+chr17 - 2,363
+chr18 - 2,664
+```
+
+```{bash, eval = F}
+cd /workdir/lbraatz/NRCRI_2022GS/output/;
+cp -r chr*_DCas22_7086_WA_REFimputedAndFiltered* /home/jj332_cas/lbraatz/NRCRI_2022GS/output/
+
+```
+
+
+## Prepare files for downstream analysis
+
+The function below will (1) convert the input VCF to plink1.9 binary format and (2) convert the plink binary to a dosage (0,1,2) matrix with special attention to which allele gets counted in the file.
+
+NOTICE: I was worried about plink1.9 changing allele codes between files. There is some risk the counted allele could switch between e.g. the reference panel and the progeny files because of allele freq. (see plink documentation). To avoid this, went to extra trouble: write a file suffixed *.alleleToCount listing SNP ID (column 1) and the ALT allele from the VCF (column 2). Pass the file to plink1.9 using the --recode-allele flag to ensure all output dosages count the ALT allele consistent with the VCFs. The reason to use plink1.9 is that Beagle5 imputed files don’t have a DS (dosage) field that can be directly extracted. Instead, phased genotypes e.g. 0|1 need to be converted to dosages (e.g. 0|1 --> 1, 1|1 --> 2). An alternative might be to extract the haplotypes using vcftools and manually (in R) computed the dosages; that would give most control but is slow.
+
+
+## Merge the Reference Population VCF and older DArT reports with the DCas22-7051, DCas22-7085, and DCas22-7086
+
+```{r, eval = F}
+.libPaths(c("/home/lbraatz/R/x86_64-pc-linux-gnu-library/4.1/", .libPaths()))
+library(tidyverse); library(magrittr);
+require(furrr); options(mc.cores=18); plan(multicore)
+pathOut<-here::here("output/")
+
+for(i in 1:18){
+  system(paste0("tabix -f -p vcf data/RefPop/chr", i,
+              "_ImputationReferencePanel_StageIIpartI_72219.vcf.gz"))
+}
+
+for(i in 1:18){
+  system(paste0("tabix -f -p vcf data/Report-DCas20-5510/chr", i,
+              "_DCas20_5510_WA_REFimputedAndFiltered.vcf.gz"))
+}
+
+for(i in 1:18){
+  system(paste0("tabix -f -p vcf data/Report-DCas21-5841/chr", i,
+              "_DCas21_5841_WA_REFimputedAndFiltered.vcf.gz"))
+}
+
+for(i in 1:18){
+  system(paste0("tabix -f -p vcf output/chr", i,
+              "_DCas22_7051_WA_REFimputedAndFiltered.vcf.gz"))
+}
+
+for(i in 1:18){
+  system(paste0("tabix -f -p vcf output/chr", i,
+              "_DCas22_7085_WA_REFimputedAndFiltered.vcf.gz"))
+}
+
+for(i in 1:18){
+  system(paste0("tabix -f -p vcf output/chr", i,
+              "_DCas22_7086_WA_REFimputedAndFiltered.vcf.gz"))
+}
+
+for(i in 1:18){
+system(paste0("bcftools merge",
+              " --output output/chr", i,
+              "_DCas2022_RefPopImputed.vcf.gz",
+              " --merge snps --output-type z --threads 5",
+              " data/RefPop/chr", i, "_ImputationReferencePanel_StageIIpartI_72219.vcf.gz",
+              " data/Report-DCas20-5510/chr", i, "_DCas20_5510_WA_REFimputedAndFiltered.vcf.gz",
+              " data/Report-DCas21-5841/chr", i, "_DCas21_5841_WA_REFimputedAndFiltered.vcf.gz",
+              " output/chr", i, "_DCas22_7051_WA_REFimputedAndFiltered.vcf.gz",
+              " output/chr", i, "_DCas22_7085_WA_REFimputedAndFiltered.vcf.gz",
+              " output/chr", i, "_DCas22_7086_WA_REFimputedAndFiltered.vcf.gz"))
+}
+```
+
+```{r, eval = F}
+library(tidyverse); library(magrittr);
+require(furrr); options(mc.cores=18); plan(multicore)
+pathOut<-here::here("output/")
+
+# DCas22_7051, DCas22_7085, and DCas22_7086
+future_map(1:18,~convertVCFtoDosage(pathIn=here::here("output/"),pathOut=pathOut,
+                                    vcfName = paste0("chr",.,"_DCas2022_RefPopImputed")))
+# Genome-wide dosage (for use in R) for each dataset
+# DCas22_7085
+createGenomewideDosage(pathIn = here::here("output/"), chroms=1:18, "_DCas2022_RefPopImputed")
+```
+
+```{r Imputation of the Missing data from All clones in VCF, eval = F}
+runBeagle5Luc <- function(targetVCF, mapFile, outName, nthreads, maxmem = "500g", 
+    impute = TRUE, ne = 1e+05, samplesToExclude = NULL){
+  system(paste0("java -Xms2g -Xmx", maxmem, " -jar /programs/beagle/beagle.jar ", 
+                "gt=", targetVCF, " ", "map=", mapFile, " ",
+                "out=", outName, " ", "nthreads=", nthreads, 
+                " impute=", impute, " ne=", ne,
+                ifelse(!is.null(samplesToExclude),
+                       paste0(" excludesamples=", samplesToExclude), "")))}
+
+targetVCFpath<-here::here("output/") # location of the targetVCF
+mapPath<-here::here("data", "CassavaGeneticMap/")
+outPath<-here::here("output/")
+outSuffix<-"DCas2022_All"
+
+library(tidyverse); library(magrittr); 
+purrr::map(1:18,
+           ~runBeagle5Luc(targetVCF=paste0(targetVCFpath,"chr",.,
+                                           "_DCas2022_RefPopImputed.vcf.gz"),
+                          mapFile=paste0(mapPath,"chr",.,
+                                         "_cassava_cM_pred.v6_91019.map"),
+                          outName=paste0(outPath,"chr",.,
+                                         "_DCas2022_Allimputed"),
+                          nthreads=30))
+```
+
+```{r Concatenating all the Chromosomes to a singl VCF file, eval = F}
+for(i in 1:18){
+  system(paste0("tabix -f -p vcf output/chr", i,
+              "_DCas2022_Allimputed.vcf.gz"))
+}
+
+system(paste0("bcftools concat ",
+              "--output ",
+              "output/AllChrDCas2022_StudyWtRefPopImputed2.vcf.gz ",
+              "--output-type z --threads 18 ",
+              paste0("output/chr", 1:18,
+                     "_DCas2022_Allimputed.vcf.gz",
+                     collapse = " ")))
+
+```
+
+```{bash, eval = F}
+cd /workdir/lbraatz/NRCRI_2022GS/output
+cp chr*_DCas2022_RefPopImputed.vcf.gz /home/jj332_cas/lbraatz/NRCRI_2022GS/output/. &
+cp AllChrDCas2022_StudyWtRefPopImputed.vcf.gz /home/jj332_cas/lbraatz/NRCRI_2022GS/output/. &
+cp DosageMatrix_DCas2022_RefPopImputed.rds /home/jj332_cas/lbraatz/NRCRI_2022GS/output/. &
+```
+
+#### Post Imputation Filter
+
+```{r Post Imputation Filter, eval = F}
+
+### Post Imputation Filter function
+postImputeFilterLuc <- function(inPath=NULL,inName,outPath=NULL,outName,HWEthresh=1e-20){
+  require(magrittr); require(dplyr)
+  # Extract imputation quality scores (DR2 and AF) from VCF
+  system(paste0("vcftools --gzvcf ",inPath,inName,".vcf.gz --hardy --out ",outPath,inName))
+  system(paste0("vcftools --gzvcf ",inPath,inName,".vcf.gz --freq2 --out ",outPath,inName))
+
+  # Read scores into R
+  hwe<-read.table(paste0(outPath,inName,".hwe"),
+                  stringsAsFactors = F, header = T)
+  maf<-read.table(paste0(outPath,inName,".frq"),
+                  stringsAsFactors = F, header = F, skip = 1) %>%
+    rename(CHROM = V1,
+           POS = V2,
+           N_ALLELES = V3,
+           N_CHR = V4,
+           Freq1 = V5) %>% select(-V6) %>%
+    mutate(MAF = ifelse(Freq1 >= 0.5, yes = 1 - Freq1, no = Freq1), .keep = "unused")
+  stats2filterOn <- left_join(maf, hwe %>% rename(CHROM=CHR))
+  # Compute MAF from AF and make sure numeric
+  # Identify sites passing filter
+  sitesPassingFilters<-stats2filterOn %>%
+    dplyr::filter(P_HWE > HWEthresh, MAF > 2/max(N_CHR)) %>%
+    dplyr::select(CHROM,POS)
+  print(paste0(nrow(sitesPassingFilters)," sites passing filter"))
+
+  # Write a list of positions passing filter to disk
+  write.table(sitesPassingFilters,
+              file = paste0(outPath,inName,".sitesPassing"),
+              row.names = F, col.names = F, quote = F)
+  # Apply filter to vcf file with vcftools
+  system(paste0("vcftools --gzvcf ",inPath,inName,".vcf.gz"," ",
+                "--positions ",outPath,inName,".sitesPassing"," ",
+                "--recode --stdout | bgzip -c -@ 24 > ",
+                outPath,outName,".vcf.gz"))
+  print(paste0("Filtering Complete: ",outName))
+}
+
+
+inPath<-here::here("output/")
+outPath<-here::here("output/")
+ncores <- 30
+require(furrr); options(mc.cores=ncores); plan(multisession)
+postImputeFilterLuc(inPath=inPath,
+                    inName=paste0("AllChrDCas2022_StudyWtRefPopImputed2"),
+                    outPath=outPath,
+                    outName=paste0("AllChrDCas2022_StudyWtRefPopImputedAndFiltered"))
+
+system(paste0("tabix -f -p vcf output/",
+              "AllChrDCas2022_StudyWtRefPopImputedAndFiltered.vcf.gz"))
+
+system(paste0("bcftools query --list-samples output/",
+              "AllChrDCas2022_StudyWtRefPopImputedAndFiltered.vcf.gz ",
+              "> output/",
+              "AllClonesDCas2022_StudyWtRefPopImputedAndFiltered.txt"))
+
+## I prepared the file to change the names in my laptop - NewClonesDCas2022NRCRI.txt file
+## example "old_name new_name" one clone per line
+
+system(paste0("bcftools reheader --samples output/",
+              "NewClonesDCas2022NRCRI.txt output/",
+              "AllChrDCas2022_StudyWtRefPopImputedAndFiltered.vcf.gz ",
+              "> output/",
+              "AllChrDCas2022_StudyWtRefPopImputedAndFilteredRenamed.vcf.gz"))
+```
+
+
+#### Convert VCF to Dosage matrix
+```{r Convert VCF to Dosage matrix, eval = F}
+system(paste0("bcftools +dosage output/AllChrDCas2022_StudyWtRefPopImputedAndFiltered.vcf.gz ",
+              "-- -t GT | bgzip -c -@30 > output/AllChrDCas2022_StudyWtRefPopImputed.txt.gz"))
+
+DM <- read_table(file = here::here("output", "AllChrDCas2022_StudyWtRefPopImputed.txt.gz"),
+                 col_names = T, comment = "", progress = T)
+DCas2022Names <- read.table(here::here("output", "NewClonesDCas2022NRCRI.txt"),
+                            header = F, sep = " ")
+DM2 <- DM[ , -c(1:4)] %>% as.matrix
+rownames(DM2) <- paste0("S", DM$`#[1]CHROM`, "_", DM$`[2]POS`)
+colnames(DM2) <- DCas2022Names$V2
+
+saveRDS(DM2, file = here::here("output", "DosageAllChrDCas2022_StudyWtRefPopImputedRenamed.rds"))
+colnames(DM2) <- DCas2022Names$V1
+saveRDS(DM2, file = here::here("output", "DosageAllChrDCas2022_StudyWtRefPopImputed.rds"))
+```
+
+### Markers Density
+```{r Markers Density, eval = F}
+library(tidyverse); library(CMplot)
+snps <- readRDS(file = here::here("output", "DosageAllChrDCas2022_StudyWtRefPopImputed.rds"))
+
+CMsnps <- tibble(SNP = colnames(snps),
+                 chr = substring(SNP,1,3),
+                 pos = substring(SNP,4)) %>%
+  mutate(chr = gsub(pattern = "_", replacement = "", x = chr) %>%
+           gsub(pattern = "S", replacement = "") %>% as.integer,
+         pos = gsub(pattern = "_[A-Z]", replacement = "", x = pos) %>%
+           gsub(pattern = "_", replacement = "", x = .) %>% as.integer)
+CMplot(CMsnps, plot.type = "d", bin.size = 1e6, col = c("darkgreen", "yellow", "red"),
+       file = "jpg", memo = "GBSDArTDensityMkrs", dpi = 500, file.output = T, verbose = TRUE)
+```
+
+
+## [Home](index.html)
+
+## Last Step
+
+2. [Imputation](Imputation.html)
+
+## Next Step
+
+4. [Phenotyping Data Curation](PhenoData.html)

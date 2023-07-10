@@ -1,0 +1,209 @@
+---
+title: "Check prediction accuracy"
+author: "LucianoRogerio"
+date: "2022-07-10"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+## Previous step
+
+2. [Get BLUPs combining all trial data](getBlups.html): Combine data from all trait-trials to get BLUPs for downstream genomic prediction.
+Fit mixed-model to multi-trial dataset and extract BLUPs, de-regressed BLUPs and weights. Include two rounds of outlier removal.
+
+## Cross-validation
+5-fold cross-validation. Replicate 5-times.
+
+2 genomic models:
+
+Additive-only (**A**)
+Addititive plus dominance plus additive-by-dominance epistasis (**ADE**)
+
+## Prep. genomic data
+
+## Get SNP data from FTP
+
+The data for the next step can be found on the cassavabase FTP server here.
+
+Can be loaded directly to R from FTP.
+
+**NOTICE**: You need enough RAM and a stable network connection. I do the next steps, including cross-validation on a server with plenty of RAM and a good, stable network connection, rather than on my personal computer (a laptop with 16 GB RAM).
+
+The outputs (kinship matrices and filtered snp dosages) of the steps below, which are too large for GitHub, I have it saved in biohpc server in jj332_cas directory.
+
+
+
+```{bash, eval = F}
+# activate multithread OpenBLAS for fast compute of SigmaM (genotypic var-covar matrix)
+cd /home/jj332_cas/lbraatz/NRCRI_2022GS/; 
+export OMP_NUM_THREADS=56
+```
+
+```{r, eval = F}
+.libPaths(c("~/R/x86_64-pc-linux-gnu-library/4.1", .libPaths()))
+library(tidyverse); library(magrittr); library(data.table)
+
+snps <- readRDS(file = here::here("output", "DosageMatrix_DCas22_7085RefPopImputed.rds"))
+
+GenotypingClones <- read.csv(here::here("data","GBSdataMasterList_31818.csv"), 
+                             stringsAsFactors = F) %>% 
+  select(DNASample,FullSampleName) %>% 
+  rename(germplasmName=DNASample) %>%
+  rbind(read.csv(here::here("data","NRCRIDArT2022Clones.csv"), 
+                 stringsAsFactors = F) %>% 
+          select(exported_tissue_sample_name, accession_name) %>% 
+          rename(FullSampleName = exported_tissue_sample_name,
+                 germplasmName = accession_name)) %>% 
+  rbind(read.csv(here::here("data","IITA_GBStoPhenoMaster_33018.csv"), 
+                 stringsAsFactors = F) %>% 
+  select(germplasmName,FullSampleName)) %>% 
+  rbind(read.csv(here::here("data","NRCRI_GBStoPhenoMaster_40318.csv"), 
+                 stringsAsFactors = F) %>% 
+          select(germplasmName,FullSampleName)) %>% unique
+
+table(rownames(snps) %in% GenotypingClones$FullSampleName)
+# 18,600 clones with the germplasmName know, only 24 unknow
+
+
+blups<-readRDS(file=here::here("output","NRCRI_blupsForModelTraining_twostage_asreml_2022Jul09.rds"))
+blups %<>% 
+  select(Trait,blups) %>% 
+  unnest(blups) %>% 
+  select(-std.error) %>% 
+  filter(GID %in% rownames(snps))
+
+ClonesSel <- c(unique(blups$GID), rownames(snps)[rownames(snps)%like%"C4"])
+
+snps2 <- snps[rownames(snps) %in% ClonesSel,]
+dim(snps2)
+
+table(unique(blups$GID) %in% rownames(snps2))
+#TRUE
+#1986
+
+Mkr2Rm <- !is.na(colMeans(snps2))
+
+snps2 <- snps2[,Mkr2Rm]
+rm(snps)
+```
+
+## MAF>1% filter
+
+```{r, eval = F}
+library(genomicMateSelectR)
+snps2 %<>% maf_filter(.,0.01)
+dim(snps2)
+```
+
+## Make Add, Dom and Epi kinships
+
+Going to use my own kinship function.
+
+Make the kinships.
+
+Below e.g. A*A makes a matrix that approximates additive-by-additive epistasis relationships.
+
+```{r Create Relationship Matrix, eval = F}
+A <- kinship(snps2,type="add")
+D <- kinship(snps2,type = "domClassic")
+AD <- A*D
+
+saveRDS(snps2,file=here::here("output","DosageMatrix_NRCRI_2022Jul10.rds"))
+saveRDS(A,file=here::here("output","Kinship_A_NRCRI_2022Jul10.rds"))
+saveRDS(D,file=here::here("output","Kinship_D_NRCRI_2022Jul10.rds"))
+saveRDS(AD,file=here::here("output","Kinship_AD_NRCRI_2022Jul10.rds"))
+#rm(snps); gc()
+```
+
+**NOTICE**: The outputs (kinship matrices and filtered snp dosages) of the steps below, which are too large for GitHub, I left all the data on the on the jj332_cas directory on the biohpc server, please contact me if you need the data.
+
+## Cross-validation
+
+```{bash}
+cd /home/jj332_cas/marnin/NRCRI_2021GS/; 
+export OMP_NUM_THREADS=56 # activate multithread OpenBLAS 
+##### [considered] 
+######/programs/R-4.0.0/bin/R # switched to R V4, having trouble with sommer/Matrix in v3.5
+## may have to reinstall packages
+```
+
+### Set-up training-testing data
+
+```{r, eval = F}
+rm(list=ls())
+.libPaths(c("~/R/x86_64-pc-linux-gnu-library/4.0", .libPaths()))
+library(tidyverse); library(magrittr); library(genomicMateSelectR); library(here)
+source(here::here("code","gsFunctions.R"))
+blups<-readRDS(file=here::here("output","NRCRI_blupsForModelTraining_twostage_asreml_2022Jul09.rds"))
+
+A<-readRDS(file=here::here("output","Kinship_A_NRCRI_2022Jul10.rds"))
+blups %<>% 
+  select(Trait,blups) %>% 
+  unnest(blups) %>% 
+  select(-std.error) %>% 
+  filter(GID %in% rownames(A))
+
+cv2do<-blups %>%
+  nest(TrainTestData=-Trait)
+cv2do %>% rmarkdown::paged_table()
+
+cv2do$TrainTestData[[6]] %>% head %>% rmarkdown::paged_table()
+```
+
+The function below runCrossVal() function implements nfold cross-validation. Specifically, for each of nrepeats it splits the data into nfolds sets according to gid. So if nfolds=5 then the the clones will be divided into 5 groups and 5 predictions will be made. In each prediction, 4/5 of the clones will be used to predict the remaining 1/5. Accuracy of the model is measured as the correlation between the BLUPs (adj. mean for each CLONE) in the test set and the GEBV (the prediction made of each clone when it was in the test set).
+
+Below, 20 reps x 5-fold cross-validation are run on 1 large memory Cornell CBSU machine each (e.g. cbsulm29; 104 cores, 512 GB RAM).
+
+## CV - modelType = “A”
+
+```{r, eval = F}
+starttime<-proc.time()[3]
+cv_A<-cv2do %>% 
+  mutate(CVresults=map(TrainTestData,~runCrossVal(TrainTestData=.,
+                                                  modelType="A",
+                                                  grms=list(A=A),
+                                                  byGroup=FALSE,augmentTP=NULL,
+                                                  nrepeats=20,nfolds=5,ncores=25,gid="GID")))
+runtime<-proc.time()[3]-starttime; runtime
+
+cv_A %<>% mutate(modelType="A") %>% dplyr::select(-TrainTestData)
+saveRDS(cv_A,file=here::here("output","cvresults_A_2022Jul10.rds"))
+
+```
+
+## CV - modelType = “ADE”
+
+```{r, eval = F}
+# split it to two tranches of 10 reps
+ 
+options(future.globals.maxSize= 3000*1024^2)
+D<-readRDS(file=here::here("output","Kinship_D_NRCRI_2022Jul10.rds"))
+AD<-readRDS(file=here::here("output","Kinship_AD_NRCRI_2022Jul10.rds"))
+starttime<-proc.time()[3]
+cv_ADE_1<-cv2do %>% 
+  mutate(CVresults=map(TrainTestData,~runCrossVal(TrainTestData=.,
+                                                  modelType="ADE",
+                                                  grms=list(A=A,D=D,AD=AD),
+                                                  byGroup=FALSE,augmentTP=NULL,
+                                                  nrepeats=10,nfolds=5,ncores=5,gid="GID")))
+cv_ADE_1 %<>% mutate(modelType="ADE") %>% dplyr::select(-TrainTestData)
+saveRDS(cv_ADE_1,file=here::here("output","cvresults_ADE_1_2022Jul10.rds"))
+runtime<-proc.time()[3]-starttime; runtime
+
+starttime<-proc.time()[3]
+cv_ADE_2<-cv2do %>% 
+  mutate(CVresults=map(TrainTestData,~runCrossVal(TrainTestData=.,
+                                                  modelType="ADE",
+                                                  grms=list(A=A,D=D,AD=AD),
+                                                  byGroup=FALSE,augmentTP=NULL,
+                                                  nrepeats=10,nfolds=5,ncores=5,gid="GID")))
+cv_ADE_2 %<>% mutate(modelType="ADE") %>% dplyr::select(-TrainTestData)
+saveRDS(cv_ADE_2,file=here::here("output","cvresults_ADE_2_2022Jul10.rds"))
+runtime<-proc.time()[3]-starttime; runtime
+
+```
+
+## Next step
+
+4. [Genomic prediction](getGBLUPs.html): Predict genomic BLUPs (GEBV and GETGV) for all selection candidates using all available data.

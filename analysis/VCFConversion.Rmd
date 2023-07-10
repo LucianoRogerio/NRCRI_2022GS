@@ -1,0 +1,209 @@
+---
+title: "VCFConversion"
+author: "LucianoRogerio"
+date: "2022-07-03"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+## Convert DArT files to an unique VCF file
+
+```{bash prepare files, eval = F}
+
+cd /workdir
+
+mkdir lbraatz
+cd lbraatz
+cp /home/jj332_cas/lbraatz/NRCRI_2022GS .
+
+cp /home/Desktop/Singularity/rocker2.sif .
+
+cd NRCRI_2022GS
+
+singularity shell -B /programs ../rocker2.sif
+
+R
+```
+
+```{r Install packages required for VCF Conversion, eval = F}
+.libPaths(c("/home/lbraatz/R/x86_64-pc-linux-gnu-library/4.1/", .libPaths()))
+devtools::install_github(repo = "LucianoRogerio/genomicMateSelectR", ref = "master",
+                         lib = "~/R/x86_64-pc-linux-gnu-library/4.1", force = T)
+## I forced to install all the updates of the genomicMateSelectR dependencies packages, to run the script smoothly
+```
+
+## DArT Report DCas22-7085
+
+### Input Parameters
+
+```{r Parameters for VCF conversion - DCas22-7085, eval = F}
+library(tidyverse); library(genomicMateSelectR)
+dartvcfInput<-here::here("data", "Report-DCas22-7085", "Report_7085_VCF_Ref_Version6.txt")
+dartcountsInput<-here::here("data", "Report-DCas22-7085", "SEQ_SNPs_counts_0_Target_extend_Ref.csv")
+outName<-here::here("data", "Report-DCas22-7085","DCas22_7085")
+nskipvcf<-2 
+nskipcounts<-2
+ncores<-10
+```
+
+### Loadings DArT Files and checking
+
+```{r Load and check files - DCas22-7085, eval = F}
+vcf<-read.table(dartvcfInput,
+                stringsAsFactors = F, skip = nskipvcf, header = T, sep = "\t", comment.char = "")
+readCounts<-read.csv(dartcountsInput, stringsAsFactors = F, header = T,
+                     skip=nskipcounts)
+
+dim(vcf)
+# [1] 13603  2730
+dim(readCounts)
+# [1] 27206  2764
+```
+
+### Convert DArT files to VCF
+
+```{r VCF conversion - DCas22-7085, eval = F}
+genomicMateSelectR::convertDart2vcf(dartvcfInput = dartvcfInput,
+                                    dartcountsInput = dartcountsInput,
+                                    nskipvcf = 2, nskipcounts = 2,
+                                    outName = outName, ncores = 10)
+```
+
+### Genomewide to per-chrom VCFs
+
+Split the genome-wide VCF into per-chromosome VCFs for imputation.
+
+```{r Split VCF - DCas22-7085, eval = F}
+require(furrr); options(mc.cores=18); plan(multiprocess)
+
+vcfIn<-here::here("data", "Report-DCas22-7085","DCas22_7085.vcf.gz")
+filters<-"--minDP 4 --maxDP 50" # because using GT not PL for impute (Beagle5)
+outPath<-here::here("data/Report-DCas22-7085/")
+outSuffix<-"DCas22_7085"
+
+future_map(1:18,
+           ~splitVCFbyChr(Chr=.,
+                          vcfIn=vcfIn,filters=filters,
+                          outPath=outPath,outSuffix=outSuffix))
+```
+
+## DArT Report DCas22-7051
+
+### Input Parameters
+
+```{r Parameters for VCF conversion - DCas22-7051, eval = F}
+.libPaths(c("~/R/x86_64-pc-linux-gnu-library/4.1", .libPaths()))
+library(tidyverse); library(genomicMateSelectR)
+dartvcfInput<-here::here("data", "Report-DCas22-7051", "Report_7051_VCF_Ref_Version6.txt")
+dartcountsInput<-here::here("data", "Report-DCas22-7051", "SEQ_SNPs_counts_0_Target_extend_Ref.csv")
+outName<-here::here("data", "Report-DCas22-7051","DCas22_7051")
+nskipvcf<-2 
+nskipcounts<-2
+ncores<-5
+```
+
+### Loadings DArT Files and checking
+
+```{r Load and check files - DCas22-7051, eval = F}
+vcf<-read.table(dartvcfInput,
+                stringsAsFactors = F, skip = nskipvcf, header = T, sep = "\t", comment.char = "")
+readCounts<-read.csv(dartcountsInput, stringsAsFactors = F, header = T,
+                     skip=nskipcounts)
+
+dim(vcf)
+# [1] 13603  107
+dim(readCounts)
+# [1] 27206  141
+```
+
+### Convert DArT files to VCF
+
+```{r VCF conversion - DCas22-7051, eval = F}
+genomicMateSelectR::convertDart2vcf(dartvcfInput = dartvcfInput,
+                                    dartcountsInput = dartcountsInput,
+                                    nskipvcf = 2, nskipcounts = 2,
+                                    outName = outName, ncores = 5)
+```
+
+### Genomewide to per-chrom VCFs
+
+Split the genome-wide VCF into per-chromosome VCFs for imputation.
+
+```{r Split VCF - DCas22-7051, eval = F}
+require(furrr); options(mc.cores=18); plan(multicore)
+
+vcfIn<-here::here("data", "Report-DCas22-7051","DCas22_7051.vcf.gz")
+filters<-"--minDP 4 --maxDP 50" # because using GT not PL for impute (Beagle5)
+outPath<-here::here("data/Report-DCas22-7051/")
+outSuffix<-"DCas22_7051"
+
+future_map(1:18,
+           ~splitVCFbyChr(Chr=.,
+                          vcfIn=vcfIn,filters=filters,
+                          outPath=outPath,outSuffix=outSuffix))
+```
+
+
+## DArT Report DCas22-7086
+
+### Input Parameters
+
+```{r Parameters for VCF conversion - DCas22-7086, eval = F}
+.libPaths(c("~/R/x86_64-pc-linux-gnu-library/4.1", .libPaths()))
+library(tidyverse); library(genomicMateSelectR)
+dartvcfInput<-here::here("data", "Report-DCas22-7086", "Report_7086_VCF_Ref_Version6.txt")
+dartcountsInput<-here::here("data", "Report-DCas22-7086", "SEQ_SNPs_counts_0_Target_extend_Ref.csv")
+outName<-here::here("data", "Report-DCas22-7086","DCas22_7086")
+nskipvcf<-2 
+nskipcounts<-2
+ncores<-5
+```
+
+### Loadings DArT Files and checking
+
+```{r Load and check files - DCas22-7086, eval = F}
+vcf<-read.table(dartvcfInput,
+                stringsAsFactors = F, skip = nskipvcf, header = T, sep = "\t", comment.char = "")
+readCounts<-read.csv(dartcountsInput, stringsAsFactors = F, header = T,
+                     skip=nskipcounts)
+
+dim(vcf)
+# [1] 13603  467
+dim(readCounts)
+# [1] 27206  501
+```
+
+### Convert DArT files to VCF
+
+```{r VCF conversion - DCas22-7086, eval = F}
+genomicMateSelectR::convertDart2vcf(dartvcfInput = dartvcfInput,
+                                    dartcountsInput = dartcountsInput,
+                                    nskipvcf = 2, nskipcounts = 2,
+                                    outName = outName, ncores = 5)
+```
+
+### Genomewide to per-chrom VCFs
+
+Split the genome-wide VCF into per-chromosome VCFs for imputation.
+
+```{r Split VCF - DCas22-7086, eval = F}
+require(furrr); options(mc.cores=18); plan(multicore)
+
+vcfIn<-here::here("data", "Report-DCas22-7086","DCas22_7086.vcf.gz")
+filters<-"--minDP 4 --maxDP 50" # because using GT not PL for impute (Beagle5)
+outPath<-here::here("data/Report-DCas22-7086/")
+outSuffix<-"DCas22_7086"
+
+future_map(1:18,
+           ~splitVCFbyChr(Chr=.,
+                          vcfIn=vcfIn,filters=filters,
+                          outPath=outPath,outSuffix=outSuffix))
+```
+
+
+## [Home](index.html)
+
+## Next Step
+
+2. [Imputation](Imputation.html)

@@ -1,0 +1,81 @@
+---
+title: "Get BLUPs combining all trial data"
+author: "LucianoRogerio"
+date: "2022-07-10"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+## Previous step
+
+1. [Prepare training dataset](PhenoData.html): Download data from DB, “Clean” and format DB data.
+
+## Get multi-trial BLUPs from raw data (two-stage)
+Two-stage procedure:
+
+1. Fit mixed-model to multi-trial dataset and extract BLUPs, de-regressed BLUPs and weights. Include two rounds of outlier removal.
+2. Genomic prediction with drg-BLUPs from multi-trial analysis as input.
+**Work below represents Stage 1 of the Two-stage procedure.**
+
+## Set-up training datasets
+
+```{bash, eval = F}
+# activate multithread OpenBLAS for fast matrix algebra
+export OMP_NUM_THREADS=56
+```
+
+```{r, eval = F}
+rm(list=ls())
+library(tidyverse); library(magrittr); library(genomicMateSelectR)
+dbdata<-readRDS(here::here("output","NRCRI_ExptDesignsDetected_2022Jul09.rds"))
+traits<-c("CGM", "CGMS1", "CGMS2", "MCMDS",
+          "DMC", "DMCsg", "DRY",
+          "IVig1-7", "PLTHT", "BRNHT1", "StC", "HI",
+          "logDRYLD", "logDRYsgLD", "logFYLD", "logTOPYLD")
+
+# **Nest by trait.** Need to restructure the data from per-trial by regrouping by trait. 
+dbdata<-nestDesignsDetectedByTraits(dbdata,traits)
+```
+
+To fit the mixed-model I used last year, I am again resorting to asreml. I fit random effects for rep and block only where complete and incomplete blocks, respectively are indicated in the trial design variables. sommer should be able to fit the same model via the at() function, but I am having trouble with it and sommer is much slower even without a dense covariance (i.e. a kinship), compared to `lme4::lmer()` or `asreml()`.
+
+```{r, eval = F}
+dbdata %<>% 
+  mutate(fixedFormula=ifelse(Trait %in% c("logDYLD","logFYLD","logRTNO","logTOPYLD"),
+                             "Value ~ yearInLoc + PropNOHAV","Value ~ yearInLoc"),
+         randFormula=paste0("~idv(GID) + idv(trialInLocYr) + at(CompleteBlocks,'Yes'):repInTrial ",
+                            "+ at(IncompleteBlocks,'Yes'):blockInRep"))
+
+dbdata %>% 
+  mutate(Nobs=map_dbl(MultiTrialTraitData,nrow)) %>% 
+  select(Trait,Nobs,fixedFormula,randFormula) %>% 
+  rmarkdown::paged_table()
+```
+
+
+
+## Function to run asreml
+
+Includes rounds of outlier removal and re-fitting.
+
+```{r Asreml prediction, eval = F}
+library(furrr); options(mc.cores=8); plan(multicore)
+library(asreml)
+source(here::here("code", "get_blups_asreml.r"))
+
+dbdata %<>% 
+  mutate(fitAS=future_pmap(.,fitASfunc))
+dbdata %<>%
+  select(-fixedFormula,-randFormula,-MultiTrialTraitData) %>%
+  unnest(fitAS)
+```
+
+## Output File
+
+```{r}
+saveRDS(dbdata,file=here::here("output","NRCRI_blupsForModelTraining_twostage_asreml_2022Jul09.rds"))
+```
+
+## Next step
+2. Check prediction accuracy: Evaluate prediction accuracy with cross-validation.

@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="LucianoRogerio" />
+
+<meta name="date" content="2022-07-03" />
+
+<title>Imputation</title>
+
+<script src="site_libs/header-attrs-2.21/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">NRCRI_2022GS</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="about.html">About</a>
+</li>
+<li>
+  <a href="license.html">License</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Imputation</h1>
+<h4 class="author">LucianoRogerio</h4>
+<h4 class="date">2022-07-03</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> </a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2023-07-10
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 6
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 1
+</p>
+<p>
+<strong>Knit directory:</strong> <code>NRCRI_2022GS/</code> <span
+class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.0). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguncommittedchanges">
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> uncommitted
+changes </a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguncommittedchanges"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The R Markdown is untracked by Git. To know which version of the R
+Markdown file created these results, you’ll want to first commit it to
+the Git repo. If you’re still working on the analysis, you can ignore
+this warning. When you’re finished, you can run
+<code>wflow_publish</code> to commit the R Markdown file and build the
+HTML.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20230710code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20230710)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20230710code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20230710)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr
+project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomLucianoRogerioNRCRI2022GStreeed3ca46982731c6382128c848301c2316b5d0769targetblanked3ca46a">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/LucianoRogerio/NRCRI_2022GS/tree/ed3ca46982731c6382128c848301c2316b5d0769" target="_blank">ed3ca46</a>
+</a>
+</p>
+</div>
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomLucianoRogerioNRCRI2022GStreeed3ca46982731c6382128c848301c2316b5d0769targetblanked3ca46a"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version
+<a href="https://github.com/LucianoRogerio/NRCRI_2022GS/tree/ed3ca46982731c6382128c848301c2316b5d0769" target="_blank">ed3ca46</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .Rproj.user/
+
+Untracked files:
+    Untracked:  analysis/CrossValidation.Rmd
+    Untracked:  analysis/Imputation.Rmd
+    Untracked:  analysis/PhenoData.Rmd
+    Untracked:  analysis/VCFConversion.Rmd
+    Untracked:  analysis/getBlups.Rmd
+    Untracked:  analysis/getGBLUPs.Rmd
+    Untracked:  analysis/results.Rmd
+    Untracked:  code/get_blups_asreml.r
+    Untracked:  code/gsFunctions.R
+
+Unstaged changes:
+    Modified:   analysis/about.Rmd
+    Modified:   analysis/index.Rmd
+    Modified:   analysis/license.Rmd
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+<p>
+There are no past versions. Publish this analysis with
+<code>wflow_publish()</code> to start tracking its development.
+</p>
+<hr>
+</div>
+</div>
+</div>
+<div id="imputation-nrcri-dcas22-7085" class="section level1">
+<h1>Imputation NRCRI DCas22-7085</h1>
+<pre class="bash"><code>mkdir /workdir/lbraatz/
+cp -r /home/jj332_cas/lbraatz/NRCRI_2022GS /workdir/lbraatz/.</code></pre>
+<div id="imputation-with-reference-panel-file" class="section level2">
+<h2>Imputation with Reference Panel file</h2>
+<p>Impute with <a
+href="https://faculty.washington.edu/browning/beagle/b5_0.html">Beagle
+V5.0</a>.</p>
+<p>Use the “imputation reference panel” dataset from 2019,
+e.g. chr1_ImputationReferencePanel_StageIIpartI_72219.vcf.gz as
+reference.</p>
+<p>Used 1 large memory Cornell CBSU machine (e.g. cbsumezey03; 64 cores,
+512 GB RAM), running 1 chromosome at a time. salloc of 5 Cores and 100
+Gb, so free imputation due to Kelly Robbins.</p>
+<p>R functions used from genomicMateSelectR.</p>
+<pre class="r"><code>targetVCFpath&lt;-here::here(&quot;data&quot;, &quot;Report-DCas22-7085/&quot;) # location of the targetVCF
+refVCFpath&lt;-here::here(&quot;data&quot;, &quot;RefPop/&quot;)
+mapPath&lt;-here::here(&quot;data&quot;, &quot;CassavaGeneticMap/&quot;)
+outPath&lt;-here::here(&quot;output/&quot;)
+outSuffix&lt;-&quot;DCas22_7085&quot;</code></pre>
+<pre class="r"><code>purrr::map(1:18,~runBeagle5(targetVCF=paste0(targetVCFpath,&quot;chr&quot;,.,
+                                             &quot;_DCas22_7085.vcf.gz&quot;),
+                            refVCF=paste0(refVCFpath,&quot;chr&quot;,.,&quot;_ImputationReferencePanel_StageIIpartI_72219.vcf.gz&quot;),
+                            mapFile=paste0(mapPath,&quot;chr&quot;,.,&quot;_cassava_cM_pred.v6_91019.map&quot;),
+                            outName=paste0(outPath,&quot;chr&quot;,.,&quot;_DCas22_7085_WA_REFimputed&quot;),
+                            nthreads=5))</code></pre>
+<p>Clean up Beagle log files after run. Move to sub-directory
+output/BeagleLogs/.</p>
+<pre class="r"><code>cd /workdir/lbraatz/NRCRI_2022GS/output/; 
+mkdir BeagleLogs;
+cp *_DCas22_7085_WA_REFimputed.log BeagleLogs/.
+cp -r BeagleLogs /home/jj332_cas/lbraatz/NRCRI_2022GS/output/.
+rm chr*_DCas22_7085_WA_REFimputed.log
+cp *_DCas22_7085_WA_REFimputed* /home/jj332_cas/lbraatz/NRCRI_2022GS/output/.</code></pre>
+</div>
+<div id="post-imputation-filter" class="section level2">
+<h2>Post Imputation Filter</h2>
+<p>For now, the function will just do a fixed filter: AR2&gt;0.75
+(DR2&gt;0.75 as of Beagle5.0), P_HWE&gt;1e-20, MAF&gt;0.005 [0.5%].</p>
+<p>It can easily be modified in the future to include parameters to vary
+the filter specifications.</p>
+<p>Input parameters</p>
+<pre><code>#&#39; @inPath path to input VCF-to-be-filtered, can be left null if path included in @inName . Must end in &quot;/&quot;
+#&#39; @inName name of input VCF file EXCLUDING file extension. Assumes .vcf.gz
+#&#39; @outPath path where filtered VCF and related are to be stored.Can be left null if path included in @outName . Must end in &quot;/&quot;.
+#&#39; @outName name desired for output EXCLUDING extension. Output will be .vcf.gz </code></pre>
+<p>Loop to filter all 18 VCF files in parallel</p>
+<pre class="r"><code>inPath&lt;-here::here(&quot;output/&quot;)
+outPath&lt;-here::here(&quot;output/&quot;)
+require(furrr); options(mc.cores=18); plan(multiprocess)
+future_map(1:18,~postImputeFilter(inPath=inPath,
+                                  inName=paste0(&quot;chr&quot;,.,&quot;_DCas22_7085_WA_REFimputed&quot;),
+                                  outPath=outPath,
+                                  outName=paste0(&quot;chr&quot;,.,
+                                                 &quot;_DCas22_7085_WA_REFimputedAndFiltered&quot;)))</code></pre>
+<p>Let’s check what is left</p>
+<pre class="r"><code>purrr::map(1:18,~system(paste0(&quot;zcat &quot;,here::here(&quot;output/&quot;),&quot;chr&quot;,.,
+                               &quot;_DCas22_7085_WA_REFimputedAndFiltered.vcf.gz | wc -l&quot;)))</code></pre>
+<pre><code>chr1  - 7,267
+chr2  - 3,355
+chr3  - 2,927
+chr4  - 3,151
+chr5  - 2,723
+chr6  - 2,764
+chr7  - 1,428
+chr8  - 2,616
+chr9  - 2,756
+chr10 - 2,662
+chr11 - 2,669
+chr12 - 2,469
+chr13 - 2,143
+chr14 - 4,799
+chr15 - 3,261
+chr16 - 2,323
+chr17 - 2,388
+chr18 - 2,239</code></pre>
+<pre class="bash"><code>cd /workdir/lbraatz/NRCRI_2022GS/output/;
+cp -r chr*_DCas22_7085_WA_REFimputedAndFiltered* /home/jj332_cas/lbraatz/NRCRI_2022GS/output/
+</code></pre>
+</div>
+</div>
+<div id="imputation-nrcri-dcas22-7051" class="section level1">
+<h1>Imputation NRCRI DCas22-7051</h1>
+<pre class="bash"><code>mkdir /workdir/lbraatz/
+cp -r /home/jj332_cas/lbraatz/NRCRI_2022GS /workdir/lbraatz/.</code></pre>
+<div id="imputation-with-reference-panel-file-1" class="section level2">
+<h2>Imputation with Reference Panel file</h2>
+<p>Impute with <a
+href="https://faculty.washington.edu/browning/beagle/b5_0.html">Beagle
+V5.0</a>.</p>
+<p>Use the “imputation reference panel” dataset from 2019,
+e.g. chr1_ImputationReferencePanel_StageIIpartI_72219.vcf.gz as
+reference.</p>
+<p>Used 1 large memory Cornell CBSU machine (e.g. cbsulm10; 64 cores,
+512 GB RAM), running 1 chromosome at a time. R functions used from
+genomicMateSelectR.</p>
+<pre class="r"><code>.libPaths(c(&quot;/home/lbraatz/R/x86_64-pc-linux-gnu-library/4.1/&quot;, .libPaths()))
+library(genomicMateSelectR)
+targetVCFpath&lt;-here::here(&quot;data&quot;, &quot;Report-DCas22-7051/&quot;) # location of the targetVCF
+refVCFpath&lt;-here::here(&quot;data&quot;, &quot;RefPop/&quot;)
+mapPath&lt;-here::here(&quot;data&quot;, &quot;CassavaGeneticMap/&quot;)
+outPath&lt;-here::here(&quot;output/&quot;)
+outSuffix&lt;-&quot;DCas22_7051&quot;</code></pre>
+<pre class="r"><code>purrr::map(1:18,~runBeagle5(targetVCF=paste0(targetVCFpath,&quot;chr&quot;,.,
+                                             &quot;_DCas22_7051.vcf.gz&quot;),
+                            refVCF=paste0(refVCFpath,&quot;chr&quot;,.,&quot;_ImputationReferencePanel_StageIIpartI_72219.vcf.gz&quot;),
+                            mapFile=paste0(mapPath,&quot;chr&quot;,.,&quot;_cassava_cM_pred.v6_91019.map&quot;),
+                            outName=paste0(outPath,&quot;chr&quot;,.,&quot;_DCas22_7051_WA_REFimputed&quot;),
+                            nthreads=5))</code></pre>
+<p>Clean up Beagle log files after run. Move to sub-directory
+output/BeagleLogs/.</p>
+<pre class="r"><code>cd /workdir/lbraatz/NRCRI_2022GS/output/; 
+mkdir BeagleLogs;
+cp *_DCas22_7051_WA_REFimputed.log BeagleLogs/.
+cp -r BeagleLogs /home/jj332_cas/lbraatz/NRCRI_2022GS/output/.
+rm chr*_DCas22_7051_WA_REFimputed.log
+cp *_DCas22_7051_WA_REFimputed* /home/jj332_cas/lbraatz/NRCRI_2022GS/output/.</code></pre>
+</div>
+<div id="post-imputation-filter-1" class="section level2">
+<h2>Post Imputation Filter</h2>
+<p>For now, the function will just do a fixed filter: AR2&gt;0.75
+(DR2&gt;0.75 as of Beagle5.0), P_HWE&gt;1e-20, MAF&gt;0.005 [0.5%].</p>
+<p>It can easily be modified in the future to include parameters to vary
+the filter specifications.</p>
+<p>Input parameters</p>
+<pre><code>#&#39; @inPath path to input VCF-to-be-filtered, can be left null if path included in @inName . Must end in &quot;/&quot;
+#&#39; @inName name of input VCF file EXCLUDING file extension. Assumes .vcf.gz
+#&#39; @outPath path where filtered VCF and related are to be stored.Can be left null if path included in @outName . Must end in &quot;/&quot;.
+#&#39; @outName name desired for output EXCLUDING extension. Output will be .vcf.gz </code></pre>
+<p>Loop to filter all 18 VCF files in parallel</p>
+<pre class="r"><code>inPath&lt;-here::here(&quot;output/&quot;)
+outPath&lt;-here::here(&quot;output/&quot;)
+require(furrr); options(mc.cores=18); plan(multiprocess)
+future_map(1:18,~postImputeFilter(inPath=inPath,
+                                  inName=paste0(&quot;chr&quot;,.,&quot;_DCas22_7051_WA_REFimputed&quot;),
+                                  outPath=outPath,
+                                  outName=paste0(&quot;chr&quot;,.,
+                                                 &quot;_DCas22_7051_WA_REFimputedAndFiltered&quot;)))</code></pre>
+<p>Let’s check what is left</p>
+<pre class="r"><code>purrr::map(1:18,~system(paste0(&quot;zcat &quot;,here::here(&quot;output/&quot;),&quot;chr&quot;,.,
+                               &quot;_DCas22_7051_WA_REFimputedAndFiltered.vcf.gz | wc -l&quot;)))</code></pre>
+<pre><code>chr1  - 8,180
+chr2  - 3,964
+chr3  - 3,854
+chr4  - 4,020
+chr5  - 3,669
+chr6  - 3,457
+chr7  - 1,930
+chr8  - 3,152
+chr9  - 3,264
+chr10 - 3,060
+chr11 - 3,324
+chr12 - 2,824
+chr13 - 2,725
+chr14 - 5,321
+chr15 - 3,944
+chr16 - 2,813
+chr17 - 2,668
+chr18 - 2,897</code></pre>
+<pre class="bash"><code>cd /workdir/lbraatz/NRCRI_2022GS/output/;
+cp -r chr*_DCas22_7051_WA_REFimputedAndFiltered* /home/jj332_cas/lbraatz/NRCRI_2022GS/output/
+</code></pre>
+</div>
+</div>
+<div id="imputation-nrcri-dcas22-7086" class="section level1">
+<h1>Imputation NRCRI DCas22-7086</h1>
+<pre class="bash"><code>mkdir /workdir/lbraatz/
+cp -r /home/jj332_cas/lbraatz/NRCRI_2022GS /workdir/lbraatz/.</code></pre>
+<div id="imputation-with-reference-panel-file-2" class="section level2">
+<h2>Imputation with Reference Panel file</h2>
+<p>Impute with <a
+href="https://faculty.washington.edu/browning/beagle/b5_0.html">Beagle
+V5.0</a>.</p>
+<p>Use the “imputation reference panel” dataset from 2019,
+e.g. chr1_ImputationReferencePanel_StageIIpartI_72219.vcf.gz as
+reference.</p>
+<p>Used 1 large memory Cornell CBSU machine (e.g. cbsulm07; 10 cores,
+512 GB RAM), running 1 chromosome at a time. R functions used from
+genomicMateSelectR.</p>
+<pre class="r"><code>.libPaths(c(&quot;/home/lbraatz/R/x86_64-pc-linux-gnu-library/4.1/&quot;, .libPaths()))
+library(genomicMateSelectR)
+targetVCFpath&lt;-here::here(&quot;data&quot;, &quot;Report-DCas22-7086/&quot;) # location of the targetVCF
+refVCFpath&lt;-here::here(&quot;data&quot;, &quot;RefPop/&quot;)
+mapPath&lt;-here::here(&quot;data&quot;, &quot;CassavaGeneticMap/&quot;)
+outPath&lt;-here::here(&quot;output/&quot;)
+outSuffix&lt;-&quot;DCas22_7086&quot;</code></pre>
+<pre class="r"><code>purrr::map(1:18,~runBeagle5(targetVCF=paste0(targetVCFpath,&quot;chr&quot;,.,
+                                             &quot;_DCas22_7086.vcf.gz&quot;),
+                            refVCF=paste0(refVCFpath,&quot;chr&quot;,.,&quot;_ImputationReferencePanel_StageIIpartI_72219.vcf.gz&quot;),
+                            mapFile=paste0(mapPath,&quot;chr&quot;,.,&quot;_cassava_cM_pred.v6_91019.map&quot;),
+                            outName=paste0(outPath,&quot;chr&quot;,.,&quot;_DCas22_7086_WA_REFimputed&quot;),
+                            nthreads=5))</code></pre>
+<p>Clean up Beagle log files after run. Move to sub-directory
+output/BeagleLogs/.</p>
+<pre class="r"><code>cd /workdir/lbraatz/NRCRI_2022GS/output/; 
+mkdir BeagleLogs;
+cp *_DCas22_7086_WA_REFimputed.log BeagleLogs/.
+cp -r BeagleLogs /home/jj332_cas/lbraatz/NRCRI_2022GS/output/.
+rm chr*_DCas22_7086_WA_REFimputed.log
+cp *_DCas22_7086_WA_REFimputed* /home/jj332_cas/lbraatz/NRCRI_2022GS/output/.</code></pre>
+</div>
+<div id="post-imputation-filter-2" class="section level2">
+<h2>Post Imputation Filter</h2>
+<p>For now, the function will just do a fixed filter: AR2&gt;0.75
+(DR2&gt;0.75 as of Beagle5.0), P_HWE&gt;1e-20, MAF&gt;0.005 [0.5%].</p>
+<p>It can easily be modified in the future to include parameters to vary
+the filter specifications.</p>
+<p>Input parameters</p>
+<pre><code>#&#39; @inPath path to input VCF-to-be-filtered, can be left null if path included in @inName . Must end in &quot;/&quot;
+#&#39; @inName name of input VCF file EXCLUDING file extension. Assumes .vcf.gz
+#&#39; @outPath path where filtered VCF and related are to be stored.Can be left null if path included in @outName . Must end in &quot;/&quot;.
+#&#39; @outName name desired for output EXCLUDING extension. Output will be .vcf.gz </code></pre>
+<p>Loop to filter all 18 VCF files in parallel</p>
+<pre class="r"><code>inPath&lt;-here::here(&quot;output/&quot;)
+outPath&lt;-here::here(&quot;output/&quot;)
+require(furrr); options(mc.cores=18); plan(multiprocess)
+future_map(1:18,~postImputeFilter(inPath=inPath,
+                                  inName=paste0(&quot;chr&quot;,.,&quot;_DCas22_7086_WA_REFimputed&quot;),
+                                  outPath=outPath,
+                                  outName=paste0(&quot;chr&quot;,.,
+                                                 &quot;_DCas22_7086_WA_REFimputedAndFiltered&quot;)))</code></pre>
+<p>Let’s check what is left</p>
+<pre class="r"><code>purrr::map(11:18,~system(paste0(&quot;zcat &quot;,here::here(&quot;output/&quot;),&quot;chr&quot;,.,
+                               &quot;_DCas22_7086_WA_REFimputedAndFiltered.vcf.gz | wc -l&quot;)))</code></pre>
+<pre><code>chr1  - 7,915
+chr2  - 3,656
+chr3  - 3,640
+chr4  - 4,014
+chr5  - 3,432
+chr6  - 3,313
+chr7  - 1,836
+chr8  - 3,090
+chr9  - 3,118
+chr10 - 2,839
+chr11 - 3,123
+chr12 - 2,660
+chr13 - 2,465
+chr14 - 4,507
+chr15 - 3,703
+chr16 - 2,599
+chr17 - 2,363
+chr18 - 2,664</code></pre>
+<pre class="bash"><code>cd /workdir/lbraatz/NRCRI_2022GS/output/;
+cp -r chr*_DCas22_7086_WA_REFimputedAndFiltered* /home/jj332_cas/lbraatz/NRCRI_2022GS/output/
+</code></pre>
+</div>
+<div id="prepare-files-for-downstream-analysis" class="section level2">
+<h2>Prepare files for downstream analysis</h2>
+<p>The function below will (1) convert the input VCF to plink1.9 binary
+format and (2) convert the plink binary to a dosage (0,1,2) matrix with
+special attention to which allele gets counted in the file.</p>
+<p>NOTICE: I was worried about plink1.9 changing allele codes between
+files. There is some risk the counted allele could switch between
+e.g. the reference panel and the progeny files because of allele freq.
+(see plink documentation). To avoid this, went to extra trouble: write a
+file suffixed *.alleleToCount listing SNP ID (column 1) and the ALT
+allele from the VCF (column 2). Pass the file to plink1.9 using the
+–recode-allele flag to ensure all output dosages count the ALT allele
+consistent with the VCFs. The reason to use plink1.9 is that Beagle5
+imputed files don’t have a DS (dosage) field that can be directly
+extracted. Instead, phased genotypes e.g. 0|1 need to be converted to
+dosages (e.g. 0|1 –&gt; 1, 1|1 –&gt; 2). An alternative might be to
+extract the haplotypes using vcftools and manually (in R) computed the
+dosages; that would give most control but is slow.</p>
+</div>
+<div
+id="merge-the-reference-population-vcf-and-older-dart-reports-with-the-dcas22-7051-dcas22-7085-and-dcas22-7086"
+class="section level2">
+<h2>Merge the Reference Population VCF and older DArT reports with the
+DCas22-7051, DCas22-7085, and DCas22-7086</h2>
+<pre class="r"><code>.libPaths(c(&quot;/home/lbraatz/R/x86_64-pc-linux-gnu-library/4.1/&quot;, .libPaths()))
+library(tidyverse); library(magrittr);
+require(furrr); options(mc.cores=18); plan(multicore)
+pathOut&lt;-here::here(&quot;output/&quot;)
+
+for(i in 1:18){
+  system(paste0(&quot;tabix -f -p vcf data/RefPop/chr&quot;, i,
+              &quot;_ImputationReferencePanel_StageIIpartI_72219.vcf.gz&quot;))
+}
+
+for(i in 1:18){
+  system(paste0(&quot;tabix -f -p vcf data/Report-DCas20-5510/chr&quot;, i,
+              &quot;_DCas20_5510_WA_REFimputedAndFiltered.vcf.gz&quot;))
+}
+
+for(i in 1:18){
+  system(paste0(&quot;tabix -f -p vcf data/Report-DCas21-5841/chr&quot;, i,
+              &quot;_DCas21_5841_WA_REFimputedAndFiltered.vcf.gz&quot;))
+}
+
+for(i in 1:18){
+  system(paste0(&quot;tabix -f -p vcf output/chr&quot;, i,
+              &quot;_DCas22_7051_WA_REFimputedAndFiltered.vcf.gz&quot;))
+}
+
+for(i in 1:18){
+  system(paste0(&quot;tabix -f -p vcf output/chr&quot;, i,
+              &quot;_DCas22_7085_WA_REFimputedAndFiltered.vcf.gz&quot;))
+}
+
+for(i in 1:18){
+  system(paste0(&quot;tabix -f -p vcf output/chr&quot;, i,
+              &quot;_DCas22_7086_WA_REFimputedAndFiltered.vcf.gz&quot;))
+}
+
+for(i in 1:18){
+system(paste0(&quot;bcftools merge&quot;,
+              &quot; --output output/chr&quot;, i,
+              &quot;_DCas2022_RefPopImputed.vcf.gz&quot;,
+              &quot; --merge snps --output-type z --threads 5&quot;,
+              &quot; data/RefPop/chr&quot;, i, &quot;_ImputationReferencePanel_StageIIpartI_72219.vcf.gz&quot;,
+              &quot; data/Report-DCas20-5510/chr&quot;, i, &quot;_DCas20_5510_WA_REFimputedAndFiltered.vcf.gz&quot;,
+              &quot; data/Report-DCas21-5841/chr&quot;, i, &quot;_DCas21_5841_WA_REFimputedAndFiltered.vcf.gz&quot;,
+              &quot; output/chr&quot;, i, &quot;_DCas22_7051_WA_REFimputedAndFiltered.vcf.gz&quot;,
+              &quot; output/chr&quot;, i, &quot;_DCas22_7085_WA_REFimputedAndFiltered.vcf.gz&quot;,
+              &quot; output/chr&quot;, i, &quot;_DCas22_7086_WA_REFimputedAndFiltered.vcf.gz&quot;))
+}</code></pre>
+<pre class="r"><code>library(tidyverse); library(magrittr);
+require(furrr); options(mc.cores=18); plan(multicore)
+pathOut&lt;-here::here(&quot;output/&quot;)
+
+# DCas22_7051, DCas22_7085, and DCas22_7086
+future_map(1:18,~convertVCFtoDosage(pathIn=here::here(&quot;output/&quot;),pathOut=pathOut,
+                                    vcfName = paste0(&quot;chr&quot;,.,&quot;_DCas2022_RefPopImputed&quot;)))
+# Genome-wide dosage (for use in R) for each dataset
+# DCas22_7085
+createGenomewideDosage(pathIn = here::here(&quot;output/&quot;), chroms=1:18, &quot;_DCas2022_RefPopImputed&quot;)</code></pre>
+<pre class="r"><code>runBeagle5Luc &lt;- function(targetVCF, mapFile, outName, nthreads, maxmem = &quot;500g&quot;, 
+    impute = TRUE, ne = 1e+05, samplesToExclude = NULL){
+  system(paste0(&quot;java -Xms2g -Xmx&quot;, maxmem, &quot; -jar /programs/beagle/beagle.jar &quot;, 
+                &quot;gt=&quot;, targetVCF, &quot; &quot;, &quot;map=&quot;, mapFile, &quot; &quot;,
+                &quot;out=&quot;, outName, &quot; &quot;, &quot;nthreads=&quot;, nthreads, 
+                &quot; impute=&quot;, impute, &quot; ne=&quot;, ne,
+                ifelse(!is.null(samplesToExclude),
+                       paste0(&quot; excludesamples=&quot;, samplesToExclude), &quot;&quot;)))}
+
+targetVCFpath&lt;-here::here(&quot;output/&quot;) # location of the targetVCF
+mapPath&lt;-here::here(&quot;data&quot;, &quot;CassavaGeneticMap/&quot;)
+outPath&lt;-here::here(&quot;output/&quot;)
+outSuffix&lt;-&quot;DCas2022_All&quot;
+
+library(tidyverse); library(magrittr); 
+purrr::map(1:18,
+           ~runBeagle5Luc(targetVCF=paste0(targetVCFpath,&quot;chr&quot;,.,
+                                           &quot;_DCas2022_RefPopImputed.vcf.gz&quot;),
+                          mapFile=paste0(mapPath,&quot;chr&quot;,.,
+                                         &quot;_cassava_cM_pred.v6_91019.map&quot;),
+                          outName=paste0(outPath,&quot;chr&quot;,.,
+                                         &quot;_DCas2022_Allimputed&quot;),
+                          nthreads=30))</code></pre>
+<pre class="r"><code>for(i in 1:18){
+  system(paste0(&quot;tabix -f -p vcf output/chr&quot;, i,
+              &quot;_DCas2022_Allimputed.vcf.gz&quot;))
+}
+
+system(paste0(&quot;bcftools concat &quot;,
+              &quot;--output &quot;,
+              &quot;output/AllChrDCas2022_StudyWtRefPopImputed2.vcf.gz &quot;,
+              &quot;--output-type z --threads 18 &quot;,
+              paste0(&quot;output/chr&quot;, 1:18,
+                     &quot;_DCas2022_Allimputed.vcf.gz&quot;,
+                     collapse = &quot; &quot;)))</code></pre>
+<pre class="bash"><code>cd /workdir/lbraatz/NRCRI_2022GS/output
+cp chr*_DCas2022_RefPopImputed.vcf.gz /home/jj332_cas/lbraatz/NRCRI_2022GS/output/. &amp;
+cp AllChrDCas2022_StudyWtRefPopImputed.vcf.gz /home/jj332_cas/lbraatz/NRCRI_2022GS/output/. &amp;
+cp DosageMatrix_DCas2022_RefPopImputed.rds /home/jj332_cas/lbraatz/NRCRI_2022GS/output/. &amp;</code></pre>
+<div id="post-imputation-filter-3" class="section level4">
+<h4>Post Imputation Filter</h4>
+<pre class="r"><code>### Post Imputation Filter function
+postImputeFilterLuc &lt;- function(inPath=NULL,inName,outPath=NULL,outName,HWEthresh=1e-20){
+  require(magrittr); require(dplyr)
+  # Extract imputation quality scores (DR2 and AF) from VCF
+  system(paste0(&quot;vcftools --gzvcf &quot;,inPath,inName,&quot;.vcf.gz --hardy --out &quot;,outPath,inName))
+  system(paste0(&quot;vcftools --gzvcf &quot;,inPath,inName,&quot;.vcf.gz --freq2 --out &quot;,outPath,inName))
+
+  # Read scores into R
+  hwe&lt;-read.table(paste0(outPath,inName,&quot;.hwe&quot;),
+                  stringsAsFactors = F, header = T)
+  maf&lt;-read.table(paste0(outPath,inName,&quot;.frq&quot;),
+                  stringsAsFactors = F, header = F, skip = 1) %&gt;%
+    rename(CHROM = V1,
+           POS = V2,
+           N_ALLELES = V3,
+           N_CHR = V4,
+           Freq1 = V5) %&gt;% select(-V6) %&gt;%
+    mutate(MAF = ifelse(Freq1 &gt;= 0.5, yes = 1 - Freq1, no = Freq1), .keep = &quot;unused&quot;)
+  stats2filterOn &lt;- left_join(maf, hwe %&gt;% rename(CHROM=CHR))
+  # Compute MAF from AF and make sure numeric
+  # Identify sites passing filter
+  sitesPassingFilters&lt;-stats2filterOn %&gt;%
+    dplyr::filter(P_HWE &gt; HWEthresh, MAF &gt; 2/max(N_CHR)) %&gt;%
+    dplyr::select(CHROM,POS)
+  print(paste0(nrow(sitesPassingFilters),&quot; sites passing filter&quot;))
+
+  # Write a list of positions passing filter to disk
+  write.table(sitesPassingFilters,
+              file = paste0(outPath,inName,&quot;.sitesPassing&quot;),
+              row.names = F, col.names = F, quote = F)
+  # Apply filter to vcf file with vcftools
+  system(paste0(&quot;vcftools --gzvcf &quot;,inPath,inName,&quot;.vcf.gz&quot;,&quot; &quot;,
+                &quot;--positions &quot;,outPath,inName,&quot;.sitesPassing&quot;,&quot; &quot;,
+                &quot;--recode --stdout | bgzip -c -@ 24 &gt; &quot;,
+                outPath,outName,&quot;.vcf.gz&quot;))
+  print(paste0(&quot;Filtering Complete: &quot;,outName))
+}
+
+
+inPath&lt;-here::here(&quot;output/&quot;)
+outPath&lt;-here::here(&quot;output/&quot;)
+ncores &lt;- 30
+require(furrr); options(mc.cores=ncores); plan(multisession)
+postImputeFilterLuc(inPath=inPath,
+                    inName=paste0(&quot;AllChrDCas2022_StudyWtRefPopImputed2&quot;),
+                    outPath=outPath,
+                    outName=paste0(&quot;AllChrDCas2022_StudyWtRefPopImputedAndFiltered&quot;))
+
+system(paste0(&quot;tabix -f -p vcf output/&quot;,
+              &quot;AllChrDCas2022_StudyWtRefPopImputedAndFiltered.vcf.gz&quot;))
+
+system(paste0(&quot;bcftools query --list-samples output/&quot;,
+              &quot;AllChrDCas2022_StudyWtRefPopImputedAndFiltered.vcf.gz &quot;,
+              &quot;&gt; output/&quot;,
+              &quot;AllClonesDCas2022_StudyWtRefPopImputedAndFiltered.txt&quot;))
+
+## I prepared the file to change the names in my laptop - NewClonesDCas2022NRCRI.txt file
+## example &quot;old_name new_name&quot; one clone per line
+
+system(paste0(&quot;bcftools reheader --samples output/&quot;,
+              &quot;NewClonesDCas2022NRCRI.txt output/&quot;,
+              &quot;AllChrDCas2022_StudyWtRefPopImputedAndFiltered.vcf.gz &quot;,
+              &quot;&gt; output/&quot;,
+              &quot;AllChrDCas2022_StudyWtRefPopImputedAndFilteredRenamed.vcf.gz&quot;))</code></pre>
+</div>
+<div id="convert-vcf-to-dosage-matrix" class="section level4">
+<h4>Convert VCF to Dosage matrix</h4>
+<pre class="r"><code>system(paste0(&quot;bcftools +dosage output/AllChrDCas2022_StudyWtRefPopImputedAndFiltered.vcf.gz &quot;,
+              &quot;-- -t GT | bgzip -c -@30 &gt; output/AllChrDCas2022_StudyWtRefPopImputed.txt.gz&quot;))
+
+DM &lt;- read_table(file = here::here(&quot;output&quot;, &quot;AllChrDCas2022_StudyWtRefPopImputed.txt.gz&quot;),
+                 col_names = T, comment = &quot;&quot;, progress = T)
+DCas2022Names &lt;- read.table(here::here(&quot;output&quot;, &quot;NewClonesDCas2022NRCRI.txt&quot;),
+                            header = F, sep = &quot; &quot;)
+DM2 &lt;- DM[ , -c(1:4)] %&gt;% as.matrix
+rownames(DM2) &lt;- paste0(&quot;S&quot;, DM$`#[1]CHROM`, &quot;_&quot;, DM$`[2]POS`)
+colnames(DM2) &lt;- DCas2022Names$V2
+
+saveRDS(DM2, file = here::here(&quot;output&quot;, &quot;DosageAllChrDCas2022_StudyWtRefPopImputedRenamed.rds&quot;))
+colnames(DM2) &lt;- DCas2022Names$V1
+saveRDS(DM2, file = here::here(&quot;output&quot;, &quot;DosageAllChrDCas2022_StudyWtRefPopImputed.rds&quot;))</code></pre>
+</div>
+<div id="markers-density" class="section level3">
+<h3>Markers Density</h3>
+<pre class="r"><code>library(tidyverse); library(CMplot)
+snps &lt;- readRDS(file = here::here(&quot;output&quot;, &quot;DosageAllChrDCas2022_StudyWtRefPopImputed.rds&quot;))
+
+CMsnps &lt;- tibble(SNP = colnames(snps),
+                 chr = substring(SNP,1,3),
+                 pos = substring(SNP,4)) %&gt;%
+  mutate(chr = gsub(pattern = &quot;_&quot;, replacement = &quot;&quot;, x = chr) %&gt;%
+           gsub(pattern = &quot;S&quot;, replacement = &quot;&quot;) %&gt;% as.integer,
+         pos = gsub(pattern = &quot;_[A-Z]&quot;, replacement = &quot;&quot;, x = pos) %&gt;%
+           gsub(pattern = &quot;_&quot;, replacement = &quot;&quot;, x = .) %&gt;% as.integer)
+CMplot(CMsnps, plot.type = &quot;d&quot;, bin.size = 1e6, col = c(&quot;darkgreen&quot;, &quot;yellow&quot;, &quot;red&quot;),
+       file = &quot;jpg&quot;, memo = &quot;GBSDArTDensityMkrs&quot;, dpi = 500, file.output = T, verbose = TRUE)</code></pre>
+</div>
+</div>
+<div id="home" class="section level2">
+<h2><a href="index.html">Home</a></h2>
+</div>
+<div id="last-step" class="section level2">
+<h2>Last Step</h2>
+<ol start="2" style="list-style-type: decimal">
+<li><a href="Imputation.html">Imputation</a></li>
+</ol>
+</div>
+<div id="next-step" class="section level2">
+<h2>Next Step</h2>
+<ol start="4" style="list-style-type: decimal">
+<li><a href="PhenoData.html">Phenotyping Data Curation</a></li>
+</ol>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.2.2 (2022-10-31)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS Ventura 13.4.1
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRblas.0.dylib
+LAPACK: /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRlapack.dylib
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+loaded via a namespace (and not attached):
+ [1] Rcpp_1.0.11      rstudioapi_0.14  knitr_1.42       magrittr_2.0.3  
+ [5] workflowr_1.7.0  R6_2.5.1         rlang_1.1.1      fastmap_1.1.1   
+ [9] fansi_1.0.4      stringr_1.5.0    tools_4.2.2      xfun_0.39       
+[13] utf8_1.2.3       cli_3.6.1        git2r_0.32.0     jquerylib_0.1.4 
+[17] htmltools_0.5.5  rprojroot_2.0.3  yaml_2.3.7       digest_0.6.33   
+[21] tibble_3.2.1     lifecycle_1.0.3  later_1.3.1      sass_0.4.5      
+[25] vctrs_0.6.3      promises_1.2.0.1 fs_1.6.2         cachem_1.0.8    
+[29] glue_1.6.2       evaluate_0.21    rmarkdown_2.21   stringi_1.7.12  
+[33] bslib_0.4.2      compiler_4.2.2   pillar_1.9.0     jsonlite_1.8.7  
+[37] httpuv_1.6.9     pkgconfig_2.0.3 </code></pre>
+</div>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
