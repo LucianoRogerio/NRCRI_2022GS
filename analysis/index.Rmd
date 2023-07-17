@@ -11,7 +11,8 @@ editor_options:
 This website has all the scripts used to apply genomic prediction to NRCRI GS population genotyped in 2022.
 
 ## 1.1˚Step Preparing the new Genotyping data
-[VCF Conversion](VCFConversiton.html)
+[VCF Conversion](VCFConversion.html)
+
 [Imputation scripts](Imputation.html)
 
 ## 1.2˚Step prepare all the phenotyping data available in cassabase from IITA trials
